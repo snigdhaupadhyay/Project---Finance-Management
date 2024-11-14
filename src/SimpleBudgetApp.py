@@ -1,8 +1,8 @@
 import tkinter as tk
 from tkinter import messagebox
 
-import Expense
-import FinanceTracker
+from Expense import Expense
+from FinanceTracker import FinanceTracker
 
 class SimpleBudgetApp:
     def __init__(self, root):

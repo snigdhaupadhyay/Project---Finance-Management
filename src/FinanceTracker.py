@@ -1,3 +1,6 @@
+from Budget import Budget
+
+
 class FinanceTracker:
     def __init__(self):
         self.expenses = []
