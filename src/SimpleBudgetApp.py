@@ -137,3 +137,5 @@ if __name__ == "__main__":
     root = tk.Tk()
     app = SimpleBudgetApp(root)
     root.mainloop()
+
+#everything sould be clear, needs to run in an environment with the GUI
