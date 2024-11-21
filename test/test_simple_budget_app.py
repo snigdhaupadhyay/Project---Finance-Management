@@ -35,13 +35,22 @@ class TestSimpleBudgetApp(unittest.TestCase):
         self.assertEqual(self.app.expense_display.cget("text"), f"Logged Expense: {self.mock_expense}")
 
     def test_log_expense_invalid_amount(self):
-        self.app.expense_entry.insert(0, "")
+        self.app.expense_entry.insert(0, "-20")  # Invalid amount
         self.app.category_var.set("Food")
-        self.app.date_entry.insert(0, "2024-11-14")
+        self.app.date_entry.set_date("2024-11-14")
         
         with patch.object(messagebox, 'showerror') as mock_messagebox:
             self.app.log_expense()
-            mock_messagebox.assert_called_with("Input Error", "Amount and Category are required fields.")
+            mock_messagebox.assert_called_with("Input Error", "Amount must be greater than 0.")
+
+    def test_log_expense_exceeds_budget(self):
+        self.app.expense_entry.insert(0, "200")  # Exceeds budget
+        self.app.category_var.set("Food")
+        self.app.date_entry.set_date("2024-11-14")
+        
+        with patch.object(messagebox, 'showwarning') as mock_messagebox:
+            self.app.log_expense()
+            mock_messagebox.assert_called_with("Budget Warning", "This expense exceeds your budget for Food.")
 
     def test_set_budget_valid_input(self):
         self.app.budget_entry.insert(0, "500")

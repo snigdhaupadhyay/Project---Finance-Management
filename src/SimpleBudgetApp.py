@@ -82,8 +82,17 @@ class SimpleBudgetApp:
             # Check if amount is a valid number
             try:
                 amount = float(amount)
+                if amount <= 0: #ensuring value is greater than 0
+                    raise ValueError("Amount must be greater than 0.")
             except ValueError:
                 raise ValueError("Amount must be a valid number.")
+
+            budget_limit = self.tracker.get_budget(category)
+            if budget_limit and amount > budget_limit:
+                messagebox.showwarning(
+                    "Budget Warning",
+                    f"Expense amount exceeds the budget of ${budget_limit} for {category}!"
+                )
 
             # Create Expense object and log it
             expense = Expense(amount, category, date)
@@ -91,6 +100,10 @@ class SimpleBudgetApp:
             messagebox.showinfo("Success", "Espense added Successfully!!!")
             # Update the display with the logged expense
             self.expense_display.config(text=f"Logged Expense: {expense}")
+
+            current_text = self.expense_display.cget("text")
+            new_entry = f"{expense}\n"
+            self.expense_display.config(text=current_text + new_entry)
             
             # Clear the input fields
             self.expense_entry.delete(0, tk.END)
