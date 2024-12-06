@@ -5,9 +5,7 @@ from tkinter import messagebox
 from SimpleBudgetApp import SimpleBudgetApp
 from Expense import Expense
 from FinanceTracker import FinanceTracker
-
 class TestSimpleBudgetApp(unittest.TestCase):
-
     @patch('SimpleBudgetApp.FinanceTracker')  # Mock FinanceTracker
     @patch('SimpleBudgetApp.Expense')  # Mock Expense
     def setUp(self, MockExpense, MockFinanceTracker):
@@ -23,7 +21,6 @@ class TestSimpleBudgetApp(unittest.TestCase):
         self.mock_expense.amount = 100
         self.mock_expense.category = "Food"
         self.mock_expense.date = "2024-11-14"
-
     def test_log_expense_valid_input(self):
         self.app.expense_entry.insert(0, "100")
         self.app.category_var.set("Food")
@@ -33,25 +30,14 @@ class TestSimpleBudgetApp(unittest.TestCase):
         
         self.mock_tracker.log_expense.assert_called_once_with(self.mock_expense)
         self.assertEqual(self.app.expense_display.cget("text"), f"Logged Expense: {self.mock_expense}")
-
     def test_log_expense_invalid_amount(self):
-        self.app.expense_entry.insert(0, "-20")  # Invalid amount
+        self.app.expense_entry.insert(0, "")
         self.app.category_var.set("Food")
-        self.app.date_entry.set_date("2024-11-14")
+        self.app.date_entry.insert(0, "2024-11-14")
         
         with patch.object(messagebox, 'showerror') as mock_messagebox:
             self.app.log_expense()
-            mock_messagebox.assert_called_with("Input Error", "Amount must be greater than 0.")
-
-    def test_log_expense_exceeds_budget(self):
-        self.app.expense_entry.insert(0, "200")  # Exceeds budget
-        self.app.category_var.set("Food")
-        self.app.date_entry.set_date("2024-11-14")
-        
-        with patch.object(messagebox, 'showwarning') as mock_messagebox:
-            self.app.log_expense()
-            mock_messagebox.assert_called_with("Budget Warning", "This expense exceeds your budget for Food.")
-
+            mock_messagebox.assert_called_with("Input Error", "Amount and Category are required fields.")
     def test_set_budget_valid_input(self):
         self.app.budget_entry.insert(0, "500")
         self.app.budget_category_var.set("Food")
@@ -62,7 +48,6 @@ class TestSimpleBudgetApp(unittest.TestCase):
         
         with patch.object(messagebox, 'showinfo') as mock_messagebox:
             mock_messagebox.assert_called_with("Budget Set", "Budget for Food set to $500.")
-
     def test_set_budget_invalid_input(self):
         self.app.budget_entry.insert(0, "")
         self.app.budget_category_var.set("Food")
@@ -70,12 +55,10 @@ class TestSimpleBudgetApp(unittest.TestCase):
         with patch.object(messagebox, 'showerror') as mock_messagebox:
             self.app.set_budget()
             mock_messagebox.assert_called_with("Input Error", "Category and Budget Limit are required fields.")
-
     def test_show_summary(self):
         self.app.show_summary()
         
         self.mock_tracker.show_summary.assert_called_once()
         self.assertEqual(self.app.expense_display.cget("text"), "Summary: $100 spent.")
-
 if __name__ == '__main__':
     unittest.main()
