@@ -1,3 +1,5 @@
+import calendar
+from pymongo import MongoClient
 import tkinter as tk
 from tkinter import messagebox
 from tkcalendar import DateEntry  # Import DateEntry from tkcalendar
@@ -12,7 +14,7 @@ class SimpleBudgetApp:
         self.root.title("SimpleBudget - Personal Finance Tracker")
         
         self.tracker = FinanceTracker()
-        
+ 
         self.frame = tk.Frame(self.root)
         self.frame.pack(padx=10, pady=10)
 
@@ -61,13 +63,37 @@ class SimpleBudgetApp:
         self.set_budget_button = tk.Button(self.frame, text="Set Budget", command=self.set_budget)
         self.set_budget_button.grid(row=6, column=0, columnspan=2, pady=10)
         
+         # Month Dropdown for Summary
+        self.month_label = tk.Label(self.frame, text="Select Month:")
+        self.month_label.grid(row=7, column=0, padx=5, pady=5)
+        self.month_var = tk.StringVar(self.frame)
+        self.month_var.set("Select Month")  # Default value
+        self.month_menu = tk.OptionMenu(
+            self.frame,
+            self.month_var,
+            *[calendar.month_name[i] for i in range(1, 13)]
+        )
+        self.month_menu.grid(row=7, column=1, padx=5, pady=5)
+        
+        # summary Budet Category Dropdown
+        self.summary_category_label = tk.Label(self.frame, text="Category for Budget:")
+        self.summary_category_label.grid(row=8, column=0, padx=5, pady=5)
+        self.summary_category_var = tk.StringVar(self.frame)
+        self.summary_category_var.set("Select Category")  # Default value
+        self.summary_category_menu = tk.OptionMenu(self.frame, self.budget_category_var, *self.categories)
+        self.summary_category_menu.grid(row=8, column=1, padx=5, pady=5)
+
         # Show Summary Button
         self.summary_button = tk.Button(self.frame, text="Show Summary", command=self.show_summary)
-        self.summary_button.grid(row=7, column=0, columnspan=2, pady=10)
+        self.summary_button.grid(row=9, column=0, columnspan=1, padx=5, pady=5)
+
+        #Clear Summary
+        self.clear_button = tk.Button(self.frame, text="Clear Summary", command=self.clear_summary)
+        self.clear_button.grid(row=9, column=1, columnspan=1, padx=5, pady=5)
 
         # Display Logged Expenses
         self.expense_display = tk.Label(self.frame, text="Logged Expenses will appear here.")
-        self.expense_display.grid(row=8, column=0, columnspan=2, pady=10)
+        self.expense_display.grid(row=10, column=0, columnspan=2, pady=10)
 
     def log_expense(self):
         try:
@@ -85,12 +111,22 @@ class SimpleBudgetApp:
             except ValueError:
                 raise ValueError("Amount must be a valid number.")
 
-            # Create Expense object and log it
-            expense = Expense(amount, category, date)
-            self.tracker.log_expense(expense)
-            messagebox.showinfo("Success", "Espense added Successfully!!!")
+            # Log expense in MongoDB
+            expense_data = {
+                "amount": amount,
+                "category": category,
+                "date": date
+            }
+            budget_data =  self.tracker.get_budget(category)
+            set_amount = float(budget_data["limit"])
+            if amount > set_amount:
+                diff_amount = amount - set_amount
+                messagebox.showwarning( "Budget Exceeded",f"Budget for   {category} has exceeded  by ${diff_amount}")
+            self.tracker.log_expense(expense_data)
+
+            messagebox.showinfo("Success", "Expense logged successfully!")
             # Update the display with the logged expense
-            self.expense_display.config(text=f"Logged Expense: {expense}")
+            self.expense_display.config(text=f"Logged Expense: Amount={amount}, Category={category}, Date={date}")
             
             # Clear the input fields
             self.expense_entry.delete(0, tk.END)
@@ -99,6 +135,9 @@ class SimpleBudgetApp:
 
         except ValueError as e:
             messagebox.showerror("Input Error", str(e))
+        except Exception as e:
+            messagebox.showerror("Database Error", f"Failed to log expense: {e}")
+
 
     def set_budget(self):
         try:
@@ -107,18 +146,58 @@ class SimpleBudgetApp:
             
             if not category or category == "Select Category" or not limit:
                 raise ValueError("Category and Budget Limit are required fields.")
+            try:
+                limit = float(limit)
+            except ValueError:
+                raise ValueError("Amount must be a valid number.")
             
-            self.tracker.set_budget(category, limit)
+            result =  self.tracker.set_budget(category, limit)
+            if result ==1 :
+                messagebox.showinfo("Budget Updated", f"Updated budget for {category} to ${limit}.")
+            if result==2:
+                messagebox.showinfo("Budget Set", f"Set new budget for {category} to ${limit}.")
             self.budget_category_var.set("Select Category")  # Reset category dropdown
             self.budget_entry.delete(0, tk.END)
-            messagebox.showinfo("Budget Set", f"Budget for {category} set to ${limit}.")
+           # messagebox.showinfo("Budget Set", f"Budget for {category} set to ${limit}.")
         except ValueError as e:
             messagebox.showerror("Input Error", str(e))
 
     def show_summary(self):
-        summary = self.tracker.show_summary()
-        self.expense_display.config(text=summary)
+        try:
+            selected_month = self.month_var.get()
+            current_year = datetime.date.today().year
+            selected_category = self.summary_category_var.get()
+            if selected_month == "Select Month":
+                 summary_data = self.tracker.show_summary()
+                 summary = f"Expense Summary: "
+            else:
+                summary_data = self.tracker.show_summarybymonth(selected_month)
+                summary = f"Expense Summary for {selected_month} {current_year}: "
 
+                       
+            # Build a summary string
+           # summary = f"Expense Summary for {selected_month} {current_year}: "
+            for entry in summary_data:
+                category = entry["_id"]
+                total = entry["total_amount"]
+                summary += f" {category}: ${total:.2f} "
+            
+            if summary == f"Expense Summary for {selected_month} {current_year}: ":
+                summary += " No expenses recorded for this month."
+            
+            # Update the display with the summary
+            self.expense_display.config(text=summary)
+        
+        except ValueError as e:
+            messagebox.showerror("Input Error", str(e))
+        except Exception as e:
+            messagebox.showerror("Database Error", f"Failed to fetch summary: {e}")
+
+    def clear_summary(self):
+        # Clear the input fields
+            self.expense_display.config(text="")
+            self.month_var.set("Select Month")  # Reset category dropdown
+            
 
 if __name__ == "__main__":
     root = tk.Tk()
