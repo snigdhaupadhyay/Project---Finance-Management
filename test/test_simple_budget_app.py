@@ -1,64 +1,124 @@
 import unittest
 from unittest.mock import MagicMock, patch
-import tkinter as tk
-from tkinter import messagebox
+from tkinter import Tk
 from SimpleBudgetApp import SimpleBudgetApp
-from Expense import Expense
 from FinanceTracker import FinanceTracker
+from Expense import Expense
+from tkinter import messagebox
+
 class TestSimpleBudgetApp(unittest.TestCase):
-    @patch('SimpleBudgetApp.FinanceTracker')  # Mock FinanceTracker
-    @patch('SimpleBudgetApp.Expense')  # Mock Expense
-    def setUp(self, MockExpense, MockFinanceTracker):
-        self.root = tk.Tk()
-        self.app = SimpleBudgetApp(self.root)
-        
-        self.mock_tracker = MockFinanceTracker.return_value
-        self.mock_expense = MockExpense.return_value
-        self.mock_tracker.log_expense = MagicMock()
-        self.mock_tracker.set_budget = MagicMock()
-        self.mock_tracker.show_summary = MagicMock(return_value="Summary: $100 spent.")
-        
-        self.mock_expense.amount = 100
-        self.mock_expense.category = "Food"
-        self.mock_expense.date = "2024-11-14"
-    def test_log_expense_valid_input(self):
-        self.app.expense_entry.insert(0, "100")
-        self.app.category_var.set("Food")
-        self.app.date_entry.insert(0, "2024-11-14")
-        
-        self.app.log_expense()
-        
-        self.mock_tracker.log_expense.assert_called_once_with(self.mock_expense)
-        self.assertEqual(self.app.expense_display.cget("text"), f"Logged Expense: {self.mock_expense}")
-    def test_log_expense_invalid_amount(self):
-        self.app.expense_entry.insert(0, "")
-        self.app.category_var.set("Food")
-        self.app.date_entry.insert(0, "2024-11-14")
-        
-        with patch.object(messagebox, 'showerror') as mock_messagebox:
-            self.app.log_expense()
-            mock_messagebox.assert_called_with("Input Error", "Amount and Category are required fields.")
-    def test_set_budget_valid_input(self):
-        self.app.budget_entry.insert(0, "500")
-        self.app.budget_category_var.set("Food")
-        
-        self.app.set_budget()
-        
-        self.mock_tracker.set_budget.assert_called_once_with("Food", "500")
-        
-        with patch.object(messagebox, 'showinfo') as mock_messagebox:
-            mock_messagebox.assert_called_with("Budget Set", "Budget for Food set to $500.")
-    def test_set_budget_invalid_input(self):
-        self.app.budget_entry.insert(0, "")
-        self.app.budget_category_var.set("Food")
-        
-        with patch.object(messagebox, 'showerror') as mock_messagebox:
-            self.app.set_budget()
-            mock_messagebox.assert_called_with("Input Error", "Category and Budget Limit are required fields.")
-    def test_show_summary(self):
-        self.app.show_summary()
-        
-        self.mock_tracker.show_summary.assert_called_once()
-        self.assertEqual(self.app.expense_display.cget("text"), "Summary: $100 spent.")
-if __name__ == '__main__':
+
+    @patch.object(FinanceTracker, 'log_expense')
+    @patch.object(FinanceTracker, 'get_budget')
+    @patch.object(messagebox, 'showinfo')
+    def test_log_expense_valid(self, mock_showinfo, mock_get_budget, mock_log_expense):
+        root = Tk()
+        app = SimpleBudgetApp(root)
+
+        # Mock the get_budget to return a valid budget
+        mock_get_budget.return_value = {"limit": 200.0}
+
+        # Set the values in the UI
+        app.expense_entry.insert(0, "50.0")
+        app.category_var.set("Food")
+        app.date_entry.set_date("2024-12-12")
+
+        # Call log_expense function
+        app.log_expense()
+
+        # Check if the log_expense was called once and the message was shown
+        mock_log_expense.assert_called_once()
+        mock_showinfo.assert_called_once_with("Success", "Expense logged successfully!")
+
+        # Clean up
+        root.destroy()
+
+    @patch.object(FinanceTracker, 'log_expense')
+    @patch.object(messagebox, 'showerror')
+    def test_log_expense_invalid_amount(self, mock_showerror, mock_log_expense):
+        root = Tk()
+        app = SimpleBudgetApp(root)
+
+        # Set invalid amount
+        app.expense_entry.insert(0, "invalid_amount")
+        app.category_var.set("Food")
+        app.date_entry.set_date("2024-12-12")
+
+        # Call log_expense function
+        app.log_expense()
+
+        # Ensure error message is shown
+        mock_showerror.assert_called_once_with("Input Error", "Amount must be a valid number.")
+        mock_log_expense.assert_not_called()
+
+        # Clean up
+        root.destroy()
+
+    @patch.object(FinanceTracker, 'set_budget')
+    @patch.object(messagebox, 'showinfo')
+    def test_set_budget_valid(self, mock_showinfo, mock_set_budget):
+        root = Tk()
+        app = SimpleBudgetApp(root)
+
+        # Mock set_budget to return success
+        mock_set_budget.return_value = 2
+
+        # Set the values in the UI
+        app.budget_entry.insert(0, "500.0")
+        app.budget_category_var.set("Food")
+
+        # Call set_budget function
+        app.set_budget()
+
+        # Check if the set_budget was called and message is shown
+        mock_set_budget.assert_called_once_with("Food", 500.0)
+        mock_showinfo.assert_called_once_with("Budget Set", "Set new budget for Food to $500.0.")
+
+        # Clean up
+        root.destroy()
+
+    @patch.object(FinanceTracker, 'get_budget')
+    @patch.object(messagebox, 'showerror')
+    def test_get_budget_no_category(self, mock_showerror, mock_get_budget):
+        root = Tk()
+        app = SimpleBudgetApp(root)
+
+        # Set category to default value (Select Category)
+        app.budget_category_var.set("Select Category")
+
+        # Call get_budget function
+        app.get_budget()
+
+        # Ensure that get_budget was called and no error was raised
+        mock_get_budget.assert_called_once()
+        mock_showerror.assert_not_called()
+
+        # Clean up
+        root.destroy()
+
+    @patch.object(FinanceTracker, 'show_summary')
+    @patch.object(messagebox, 'showerror')
+    def test_show_summary_valid(self, mock_showerror, mock_show_summary):
+        root = Tk()
+        app = SimpleBudgetApp(root)
+
+        # Mock show_summary to return a valid summary
+        mock_show_summary.return_value = [
+            {"_id": "Food", "total_amount": 100.0},
+            {"_id": "Transportation", "total_amount": 50.0}
+        ]
+
+        # Set the values in the UI
+        app.month_var.set("January")
+
+        # Call show_summary function
+        app.show_summary()
+
+        # Ensure summary is displayed in expense_display
+        self.assertEqual(app.expense_display.cget("text"), "Expense Summary for January 2024: \nFood: $100.00 \nTransportation: $50.00")
+
+        # Clean up
+        root.destroy()
+
+if __name__ == "__main__":
     unittest.main()
