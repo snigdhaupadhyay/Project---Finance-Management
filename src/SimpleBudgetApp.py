@@ -79,21 +79,21 @@ class SimpleBudgetApp:
         )
         self.month_menu.grid(row=7, column=1, padx=5, pady=5)
         
-        # summary Budet Category Dropdown
-        self.summary_category_label = tk.Label(self.frame, text="Category for Budget:")
-        self.summary_category_label.grid(row=8, column=0, padx=5, pady=5)
-        self.summary_category_var = tk.StringVar(self.frame)
-        self.summary_category_var.set("Select Category")  # Default value
-        self.summary_category_menu = tk.OptionMenu(self.frame, self.summary_category_var, *self.categories)
-        self.summary_category_menu.grid(row=8, column=1, padx=5, pady=5)
+        # # summary Budet Category Dropdown
+        # self.summary_category_label = tk.Label(self.frame, text="Category for Budget:")
+        # self.summary_category_label.grid(row=8, column=0, padx=5, pady=5)
+        # self.summary_category_var = tk.StringVar(self.frame)
+        # self.summary_category_var.set("Select Category")  # Default value
+        # self.summary_category_menu = tk.OptionMenu(self.frame, self.summary_category_var, *self.categories)
+        # self.summary_category_menu.grid(row=8, column=1, padx=5, pady=5)
 
         # Show Summary Button
         self.summary_button = tk.Button(self.frame, text="Show Summary", command=self.show_summary)
-        self.summary_button.grid(row=9, column=0, columnspan=1, padx=5, pady=5)
+        self.summary_button.grid(row=8, column=0, columnspan=1, padx=5, pady=5)
 
         #Clear Summary
         self.clear_button = tk.Button(self.frame, text="Clear Summary", command=self.clear_summary)
-        self.clear_button.grid(row=9, column=1, columnspan=1, padx=5, pady=5)
+        self.clear_button.grid(row=8, column=1, columnspan=1, padx=5, pady=5)
 
         # Display Logged Expenses
         self.expense_display = tk.Label(self.frame, text="Logged Expenses will appear here.")
@@ -202,31 +202,97 @@ class SimpleBudgetApp:
         try:
             selected_month = self.month_var.get()
             current_year = datetime.date.today().year
-            selected_category = self.summary_category_var.get()
+            #selected_category = self.summary_category_var.get()
             if selected_month == "Select Month":
                  summary_data = self.tracker.show_summary()
                  summary = f"Expense Summary: "
             else:
                 summary_data = self.tracker.show_summarybymonth(selected_month)
                 summary = f"Expense Summary for {selected_month} {current_year}: "
-                   
+            # if selected_category!= "Select Category":
+            #     summary_data = self.tracker.show_summarybycategory(selected_category)
+            budgetdata = self.tracker.get_allbudget()
+            all_budgets = {budget["category"]: budget["limit"] for budget in self.tracker.get_allbudget()}
+
+            summarybudget= "Expense For - "
             # Build a summary string
            # summary = f"Expense Summary for {selected_month} {current_year}: "
             for entry in summary_data:
                 category = entry["_id"]
                 total = entry["total_amount"]
                 summary += f" \n{category}: ${total:.2f} "
-            
+                if category in  all_budgets and total > all_budgets[category]:
+                    diff = total - all_budgets[category]
+                    summarybudget += f"\n {category} exceeds the budget by ${diff:.2f} "
+                else:
+                    summarybudget += f"\n {category} within limit "
+                    
             if summary == f"Expense Summary for {selected_month} {current_year}: ":
                 summary += " No expenses recorded for this month."
+                summarybudget = " No expense recorded"
+            
+           
             
             # Update the display with the summary
             self.expense_display.config(text=summary)
+            self.budget_display.config(text=summarybudget)
         
         except ValueError as e:
             messagebox.showerror("Input Error", str(e))
         except Exception as e:
             messagebox.showerror("Database Error", f"Failed to fetch summary: {e}")
+
+    def show_summary1(self):
+        try:
+            selected_month = self.month_var.get()
+            selected_category = self.category_var.get()
+
+            # Initialize filters
+            filters = {}
+            if selected_month != "Select Month":
+                month_num = list(calendar.month_name).index(selected_month)
+                filters["month"] = month_num
+            if selected_category != "Select Category":
+                filters["category"] = selected_category
+
+            current_year = datetime.date.today().year
+
+            # Fetch all expenses from the database
+            all_expenses = self.tracker.get_allsummary()
+
+            # Filter expenses in the code based on month and/or category
+            filtered_expenses = []
+            for expense in all_expenses:
+                expense_month = datetime.datetime.strptime(expense["date"], "%Y-%m-%d").month
+                expense_year = datetime.datetime.strptime(expense["date"], "%Y-%m-%d").year
+                if ((not filters.get("month") or filters["month"] == expense_month) and
+                    (not filters.get("category") or filters["category"] == expense["category"]) and
+                    (expense_year == current_year)):
+                    filtered_expenses.append(expense)
+
+            # Summarize the filtered expenses
+            summary_data = {}
+            for expense in filtered_expenses:
+                category = expense["category"]
+                amount = expense["amount"]
+                summary_data[category] = summary_data.get(category, 0) + amount
+
+            # Build the summary string
+            if not summary_data:
+                summary = "No expenses recorded for the selected filters."
+            else:
+                summary = f"Expense Summary for {selected_month or 'All Months'}:\n"
+                for category, total in summary_data.items():
+                    summary += f"{category}: ${total:.2f}\n"
+
+            # Update the display with the summary
+            self.expense_display.config(text=summary)
+
+        except ValueError as e:
+            messagebox.showerror("Input Error", str(e))
+        except Exception as e:
+            messagebox.showerror("Database Error", f"Failed to fetch summary: {e}")
+
 
     def clear_summary(self):
         # Clear the input fields

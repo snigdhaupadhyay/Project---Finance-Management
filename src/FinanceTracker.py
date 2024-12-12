@@ -59,7 +59,11 @@ class FinanceTracker:
         except Exception as e:
             messagebox.showerror("Database Error", f"Failed to fetch summary: {e}")
         return summary_data
-    
+   
+    def get_allsummary(self):
+         all_expenses = list(self.expenses_collection.find({}))
+         return all_expenses
+
     def get_budget(self,category):
         try:
             budget_data = self.budget_collection.find_one({"category": category})
@@ -104,13 +108,16 @@ class FinanceTracker:
             
     def show_summarybycategory(self,category):
         try:
-            
-            summary_data = self.expenses_collection.aggregate([
-                    {"$match": {"_id": category}},
-                    {"$group": {"_id": "$category", "total_amount": {"$sum": "$amount"}}}
-                ])
+            all_expenses = list(self.expenses_collection.find({}))
+            filtered_expenses = [expense for expense in all_expenses if expense.get("category") == category]
+
+             # Calculate the total amount for the selected category
+            total_amount = sum(expense.get("amount", 0) for expense in filtered_expenses)
+
         except ValueError as e:
             messagebox.showerror(" Error", str(e))   
         except Exception as e:
             messagebox.showerror("Database Error", f"Failed to fetch summary: {e}")
-        return summary_data
+        return filtered_expenses
+    
+   
