@@ -1,18 +1,40 @@
 import unittest
-from Expense import Expense
+from datetime import datetime
+from Expense import Expense  # Assuming Expense class is in a module named 'Expense'
+
 
 class TestExpense(unittest.TestCase):
 
-    def test_initialization(self):
-        expense = Expense(amount="100", category="Food", date="2024-11-14")
+    def test_expense_initialization(self):
+        # Test the initialization of Expense object
+        expense = Expense(100.0, "Food", "2024-12-12")
         
-        self.assertEqual(expense.amount, "100")
+        self.assertEqual(expense.amount, 100.0)
         self.assertEqual(expense.category, "Food")
-        self.assertEqual(expense.date, "2024-11-14")
-    
+        self.assertEqual(expense.date, datetime(2024, 12, 12))  # Ensure date is converted to datetime object
+
+    def test_convert_to_datetime_with_string(self):
+        # Test that a string date is converted correctly to a datetime object
+        expense = Expense(100.0, "Food", "2024-12-12")
+        
+        self.assertEqual(expense.date, datetime(2024, 12, 12))
+
+    def test_convert_to_datetime_with_datetime(self):
+        # Test that a datetime object is passed as-is (no conversion)
+        expense = Expense(100.0, "Food", datetime(2024, 12, 12))
+        
+        self.assertEqual(expense.date, datetime(2024, 12, 12))
+
     def test_str_method(self):
-        expense = Expense(amount="100", category="Food", date="2024-11-14")
-        self.assertEqual(str(expense), "100 - Food on 2024-11-14")
+        # Test the string representation of the Expense object
+        expense = Expense(100.0, "Food", "2024-12-12")
+        
+        # Expected string format should be '2024-12-12 - Food - $100.00'
+        self.assertEqual(str(expense), "2024-12-12 - Food - $100.00")
     
-if __name__ == '__main__':
-    unittest.main()
+    def test_str_method_with_non_datetime(self):
+        # Test the string method when the date is not a datetime object
+        expense = Expense(50.0, "Transport", "2024-12-12")
+        
+        # Check if the string format matches expected output
+        self.assertEqual(str(expense), "2024-12-12 - Transport - $50.00")
