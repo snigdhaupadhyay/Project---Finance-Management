@@ -1,6 +1,9 @@
 import unittest
 from tkinter import Tk, messagebox
 from unittest.mock import patch
+import os
+import sys
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
 from SimpleBudgetApp import SimpleBudgetApp
 
 class TestSimpleBudgetAppGUI(unittest.TestCase):

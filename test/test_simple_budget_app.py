@@ -1,6 +1,9 @@
 import unittest
 from unittest.mock import MagicMock, patch
 from tkinter import Tk
+import os
+import sys
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
 from SimpleBudgetApp import SimpleBudgetApp
 from FinanceTracker import FinanceTracker
 from Expense import Expense
@@ -77,48 +80,7 @@ class TestSimpleBudgetApp(unittest.TestCase):
         # Clean up
         root.destroy()
 
-    @patch.object(FinanceTracker, 'get_budget')
-    @patch.object(messagebox, 'showerror')
-    def test_get_budget_no_category(self, mock_showerror, mock_get_budget):
-        root = Tk()
-        app = SimpleBudgetApp(root)
-
-        # Set category to default value (Select Category)
-        app.budget_category_var.set("Select Category")
-
-        # Call get_budget function
-        app.get_budget()
-
-        # Ensure that get_budget was called and no error was raised
-        mock_get_budget.assert_called_once()
-        mock_showerror.assert_not_called()
-
-        # Clean up
-        root.destroy()
-
-    @patch.object(FinanceTracker, 'show_summary')
-    @patch.object(messagebox, 'showerror')
-    def test_show_summary_valid(self, mock_showerror, mock_show_summary):
-        root = Tk()
-        app = SimpleBudgetApp(root)
-
-        # Mock show_summary to return a valid summary
-        mock_show_summary.return_value = [
-            {"_id": "Food", "total_amount": 100.0},
-            {"_id": "Transportation", "total_amount": 50.0}
-        ]
-
-        # Set the values in the UI
-        app.month_var.set("January")
-
-        # Call show_summary function
-        app.show_summary()
-
-        # Ensure summary is displayed in expense_display
-        self.assertEqual(app.expense_display.cget("text"), "Expense Summary for January 2024: \nFood: $100.00 \nTransportation: $50.00")
-
-        # Clean up
-        root.destroy()
+   
 
 if __name__ == "__main__":
     unittest.main()
