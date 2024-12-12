@@ -61,7 +61,11 @@ class SimpleBudgetApp:
 
         # Set Budget Button
         self.set_budget_button = tk.Button(self.frame, text="Set Budget", command=self.set_budget)
-        self.set_budget_button.grid(row=6, column=0, columnspan=2, pady=10)
+        self.set_budget_button.grid(row=6, column=0, columnspan=1, pady=10)
+        
+         # Get Budget Button
+        self.get_budget_button = tk.Button(self.frame, text="Get Budget", command=self.get_budget)
+        self.get_budget_button.grid(row=6, column=1, columnspan=1, pady=10)
         
          # Month Dropdown for Summary
         self.month_label = tk.Label(self.frame, text="Select Month:")
@@ -80,7 +84,7 @@ class SimpleBudgetApp:
         self.summary_category_label.grid(row=8, column=0, padx=5, pady=5)
         self.summary_category_var = tk.StringVar(self.frame)
         self.summary_category_var.set("Select Category")  # Default value
-        self.summary_category_menu = tk.OptionMenu(self.frame, self.budget_category_var, *self.categories)
+        self.summary_category_menu = tk.OptionMenu(self.frame, self.summary_category_var, *self.categories)
         self.summary_category_menu.grid(row=8, column=1, padx=5, pady=5)
 
         # Show Summary Button
@@ -94,6 +98,10 @@ class SimpleBudgetApp:
         # Display Logged Expenses
         self.expense_display = tk.Label(self.frame, text="Logged Expenses will appear here.")
         self.expense_display.grid(row=10, column=0, columnspan=2, pady=10)
+
+        # Display Budget
+        self.budget_display = tk.Label(self.frame, text="")
+        self.budget_display.grid(row=11, column=0, columnspan=2, pady=10)
 
     def log_expense(self):
         try:
@@ -118,6 +126,7 @@ class SimpleBudgetApp:
                 "date": date
             }
             budget_data =  self.tracker.get_budget(category)
+            #checking sum of budget for the catefory
             set_amount = float(budget_data["limit"])
             if amount > set_amount:
                 diff_amount = amount - set_amount
@@ -161,6 +170,33 @@ class SimpleBudgetApp:
            # messagebox.showinfo("Budget Set", f"Budget for {category} set to ${limit}.")
         except ValueError as e:
             messagebox.showerror("Input Error", str(e))
+    def get_budget(self):
+        try:
+            
+            selected_category = self.budget_category_var.get()
+            if selected_category == "Select Category":
+                summary_data = self.tracker.get_allbudget()
+                summary = f"Set Budget is : "
+                for entry in summary_data:
+                    category = entry["category"]
+                    set_limit = entry["limit"]
+                    summary += f" \n{category}: ${set_limit} "
+            else:
+                summary_data = self.tracker.get_budget(selected_category)
+                amount = summary_data["limit"]
+                summary = f"Set budget for  {selected_category} : {amount}"
+                   
+          
+            if summary == f"Expense Summary for {selected_category} : ":
+                summary += f" No budget set for {selected_category}. "
+            
+            # Update the display with the summary
+            self.budget_display.config(text=summary)
+        
+        except ValueError as e:
+            messagebox.showerror("Input Error", str(e))
+        except Exception as e:
+            messagebox.showerror("Database Error", f"Failed to fetch summary: {e}")
 
     def show_summary(self):
         try:
@@ -173,14 +209,13 @@ class SimpleBudgetApp:
             else:
                 summary_data = self.tracker.show_summarybymonth(selected_month)
                 summary = f"Expense Summary for {selected_month} {current_year}: "
-
-                       
+                   
             # Build a summary string
            # summary = f"Expense Summary for {selected_month} {current_year}: "
             for entry in summary_data:
                 category = entry["_id"]
                 total = entry["total_amount"]
-                summary += f" {category}: ${total:.2f} "
+                summary += f" \n{category}: ${total:.2f} "
             
             if summary == f"Expense Summary for {selected_month} {current_year}: ":
                 summary += " No expenses recorded for this month."
@@ -197,6 +232,7 @@ class SimpleBudgetApp:
         # Clear the input fields
             self.expense_display.config(text="")
             self.month_var.set("Select Month")  # Reset category dropdown
+            self.budget_display.config(text="")
             
 
 if __name__ == "__main__":
